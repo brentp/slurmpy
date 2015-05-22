@@ -18,8 +18,9 @@ set -eo pipefail -o nounset
 #>>> s.run("do stuff")
 
 """
+from __future__ import print_function
 
-
+import sys
 import os
 import subprocess
 import tempfile
@@ -61,7 +62,7 @@ class Slurm(object):
                 k = "-" + k + " "
             header.append("#SBATCH %s%s" % (k, v))
         self.header = "\n".join(header)
-        self.name = name
+        self.name = "".join(x for x in name.replace(" ", "-") if x.isalnum() or x == "-")
         self.tmpl = tmpl
         self.slurm_kwargs = slurm_kwargs
         if scripts_dir is not None:
@@ -81,18 +82,18 @@ class Slurm(object):
                 os.makedirs(self.scripts_dir)
             return "%s/%s.sh" % (self.scripts_dir, self.name)
 
-    def run(self, command, name_addition=None, _cmd="sbatch", cmd_kwargs=None):
+    def run(self, command, name_addition=None, cmd_kwargs=None, _cmd="sbatch"):
         """
         command: a bash command that you want to run
         name_addition: if not specified, the sha1 of the command to run
                        appended to job name
-        _cmd: submit command (change to "bash" for testing).
         cmd_kwargs: dict of extra arguments to fill in command
                    (so command itself can be a template).
+        _cmd: submit command (change to "bash" for testing).
         """
-
         if name_addition is None:
-            name_addition = hashlib.sha1(command).hexdigest()
+            name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
+
         if cmd_kwargs is None:
             cmd_kwargs = {}
 
@@ -101,12 +102,20 @@ class Slurm(object):
 
         tmpl = str(self).format(script=command)
 
+        if "logs/" in tmpl and not os.path.exists("logs/"):
+            os.makedirs("logs")
+
         with open(self._tmpfile(), "w") as sh:
             cmd_kwargs["script"] = command
             sh.write(tmpl.format(**cmd_kwargs))
 
-        subprocess.check_call([_cmd, sh.name])
+        res = subprocess.check_output([_cmd, sh.name])
+        print(res, file=sys.stderr)
         self.name = n
+        if not res.startswith(b"Submitted batch"):
+            return None
+        job_id = int(res.split()[-1])
+        return job_id
 
 if __name__ == "__main__":
     import doctest

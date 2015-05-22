@@ -1,4 +1,4 @@
-quick and dirty lib for submitting jobs to slurm via python.
+quick and dirty lib for submitting jobs to slurm via python2/python3.
 
 ```Python
 from slurm import Slurm
@@ -19,3 +19,10 @@ and automatically write logs/{name}.err and logs/{name}.out
 It uses a template by default, but can be overriden with the kwargs dict as above.
 
 The script to run() can also be a template which is filled with the cmd_kwarg dict.
+
+Install
+=======
+
+```Shell
+pip install slurmpy --user
+```
