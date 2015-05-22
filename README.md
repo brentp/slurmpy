@@ -1,7 +1,7 @@
 quick and dirty lib for submitting jobs to slurm via python2/python3.
 
 ```Python
-from slurm import Slurm
+from slurmpy import Slurm
 
 s = Slurm("job-name", {"account": "my-account", "partition": "my-parition"})
 s.run("""
