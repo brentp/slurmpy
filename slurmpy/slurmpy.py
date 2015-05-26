@@ -1,7 +1,7 @@
 r"""
 # send in job name and kwargs for slurm params:
 >>> s = Slurm("job-name", {"account": "ucgd-kp", "partition": "ucgd-kp"})
->>> print str(s)
+>>> print(str(s))
 #!/bin/bash
 <BLANKLINE>
 #SBATCH -e logs/job-name.%J.err
@@ -15,7 +15,7 @@ set -eo pipefail -o nounset
 <BLANKLINE>
 {script}
 
-#>>> s.run("do stuff")
+>>> s.run("do stuff", _cmd="ls", name_addition="")
 
 """
 from __future__ import print_function
@@ -26,6 +26,7 @@ import subprocess
 import tempfile
 import atexit
 import hashlib
+import datetime
 
 TMPL = """\
 #!/bin/bash
@@ -48,7 +49,7 @@ def tmp(suffix=".sh"):
 
 
 class Slurm(object):
-    def __init__(self, name, slurm_kwargs=None, tmpl=None, scripts_dir="scripts/"):
+    def __init__(self, name, slurm_kwargs=None, tmpl=None, date_in_name=True, scripts_dir="scripts/"):
         if slurm_kwargs is None:
             slurm_kwargs = {}
         if tmpl is None:
@@ -69,6 +70,8 @@ class Slurm(object):
             self.scripts_dir = os.path.abspath(scripts_dir)
         else:
             self.scripts_dir = None
+        self.date_in_name = bool(date_in_name)
+
 
     def __str__(self):
         return self.tmpl.format(name=self.name, header=self.header,
@@ -86,7 +89,8 @@ class Slurm(object):
         """
         command: a bash command that you want to run
         name_addition: if not specified, the sha1 of the command to run
-                       appended to job name
+                       appended to job name. if it is "date", the yyyy-mm-dd
+                       date will be added to the job name.
         cmd_kwargs: dict of extra arguments to fill in command
                    (so command itself can be a template).
         _cmd: submit command (change to "bash" for testing).
@@ -94,11 +98,16 @@ class Slurm(object):
         if name_addition is None:
             name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
 
+        if self.date_in_name:
+            name_addition += "-" + str(datetime.date.today())
+        name_addition = name_addition.strip(" -")
+
         if cmd_kwargs is None:
             cmd_kwargs = {}
 
         n = self.name
-        self.name += ("-" + name_addition).strip(" -")
+        self.name += ("-" + name_addition)
+        self.name = self.name.strip(" -")
 
         tmpl = str(self).format(script=command)
 
