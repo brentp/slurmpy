@@ -106,8 +106,8 @@ class Slurm(object):
             cmd_kwargs = {}
 
         n = self.name
-        self.name += ("-" + name_addition)
         self.name = self.name.strip(" -")
+        self.name += ("-" + name_addition.strip(" -"))
 
         tmpl = str(self).format(script=command)
 
