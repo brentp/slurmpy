@@ -15,7 +15,7 @@ set -eo pipefail -o nounset
 <BLANKLINE>
 {script}
 
->>> s.run("do stuff", _cmd="ls", name_addition="")
+>>> s.run("do stuff", _cmd="ls", name_addition="", tries=4)
 
 """
 from __future__ import print_function
@@ -85,7 +85,7 @@ class Slurm(object):
                 os.makedirs(self.scripts_dir)
             return "%s/%s.sh" % (self.scripts_dir, self.name)
 
-    def run(self, command, name_addition=None, cmd_kwargs=None, _cmd="sbatch"):
+    def run(self, command, name_addition=None, cmd_kwargs=None, _cmd="sbatch", tries=1):
         """
         command: a bash command that you want to run
         name_addition: if not specified, the sha1 of the command to run
@@ -94,6 +94,8 @@ class Slurm(object):
         cmd_kwargs: dict of extra arguments to fill in command
                    (so command itself can be a template).
         _cmd: submit command (change to "bash" for testing).
+        tries: try to run a job either this many times or until the first
+               success.
         """
         if name_addition is None:
             name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
@@ -118,12 +120,20 @@ class Slurm(object):
             cmd_kwargs["script"] = command
             sh.write(tmpl.format(**cmd_kwargs))
 
-        res = subprocess.check_output([_cmd, sh.name]).strip()
-        print(res, file=sys.stderr)
-        self.name = n
-        if not res.startswith(b"Submitted batch"):
-            return None
-        job_id = int(res.split()[-1])
+        job_id = None
+        for itry in range(1, tries + 1):
+            if itry > 1:
+                mid = "--dependency=afternotok:%d" % job_id
+                res = subprocess.check_output([_cmd, mid, sh.name]).strip()
+            else:
+                res = subprocess.check_output([_cmd, sh.name]).strip()
+            print(res, file=sys.stderr)
+            self.name = n
+            if not res.startswith(b"Submitted batch"):
+                return None
+            j_id = int(res.split()[-1])
+            if itry == 1:
+                job_id = j_id
         return job_id
 
 if __name__ == "__main__":
