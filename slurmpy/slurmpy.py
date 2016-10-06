@@ -49,7 +49,7 @@ def tmp(suffix=".sh"):
 
 
 class Slurm(object):
-    def __init__(self, name, slurm_kwargs=None, tmpl=None, date_in_name=True, scripts_dir="scripts/"):
+    def __init__(self, name, slurm_kwargs=None, tmpl=None, date_in_name=True, scripts_dir="slurm-scripts/"):
         if slurm_kwargs is None:
             slurm_kwargs = {}
         if tmpl is None:
