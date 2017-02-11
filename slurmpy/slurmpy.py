@@ -15,7 +15,9 @@ set -eo pipefail -o nounset
 <BLANKLINE>
 {script}
 
->>> s.run("do stuff", _cmd="ls", name_addition="", tries=4)
+>>> job_id = s.run("rm -f aaa; sleep 10; echo 213 > aaa", name_addition="", tries=1)
+
+>>> job = s.run("cat aaa; rm aaa", name_addition="", tries=1, depends_on=[job_id])
 
 """
 from __future__ import print_function
@@ -85,7 +87,7 @@ class Slurm(object):
                 os.makedirs(self.scripts_dir)
             return "%s/%s.sh" % (self.scripts_dir, self.name)
 
-    def run(self, command, name_addition=None, cmd_kwargs=None, _cmd="sbatch", tries=1):
+    def run(self, command, name_addition=None, cmd_kwargs=None, _cmd="sbatch", tries=1, depends_on=None):
         """
         command: a bash command that you want to run
         name_addition: if not specified, the sha1 of the command to run
@@ -96,6 +98,7 @@ class Slurm(object):
         _cmd: submit command (change to "bash" for testing).
         tries: try to run a job either this many times or until the first
                success.
+        depends_on: job ids that this depends on before it is run (users 'afterok')
         """
         if name_addition is None:
             name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
@@ -112,6 +115,9 @@ class Slurm(object):
         self.name += ("-" + name_addition.strip(" -"))
 
         tmpl = str(self).format(script=command)
+        if depends_on is None:
+            depends_on = []
+
 
         if "logs/" in tmpl and not os.path.exists("logs/"):
             os.makedirs("logs")
@@ -122,12 +128,15 @@ class Slurm(object):
 
         job_id = None
         for itry in range(1, tries + 1):
+            args = [_cmd]
+            args.extend(["--dependency=afterok:%d" % d for d in depends_on])
             if itry > 1:
                 mid = "--dependency=afternotok:%d" % job_id
-                res = subprocess.check_output([_cmd, mid, sh.name]).strip()
-            else:
-                res = subprocess.check_output([_cmd, sh.name]).strip()
-            print(res, file=sys.stderr)
+                args.append(mid)
+            args.append(sh.name)
+            #print(args)
+            res = subprocess.check_output(args).strip()
+            print("submitted:", res, file=sys.stderr)
             self.name = n
             if not res.startswith(b"Submitted batch"):
                 return None
