@@ -17,9 +17,8 @@ The above will submit the job to `sbatch` automatically write the script to `scr
 and automatically write logs/{name}.err and logs/{name}.out. It will have today's
 date in the log and script names.
 
-It uses a template by default, but can be overriden with the kwargs dict as above.
-
-The script to run() can also be a template which is filled with the cmd_kwarg dict.
+The script to run() can also contain `$variables` which are filled with the cmd_kwarg dict.
+E.g. `echo $name` could be filled with `cmd_kwargs={'name': 'sally'}`
 
 A command can be tested (not sent to queue) by setting the `_cmd` are to `run` as e.g. "ls".
 The default is `sbatch` which submits jobs to slurm.

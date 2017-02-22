@@ -13,7 +13,7 @@ r"""
 <BLANKLINE>
 set -eo pipefail -o nounset
 <BLANKLINE>
-{script}
+__script__
 
 >>> job_id = s.run("rm -f aaa; sleep 10; echo 213 > aaa", name_addition="", tries=1)
 
@@ -41,7 +41,7 @@ TMPL = """\
 
 set -eo pipefail -o nounset
 
-{script}"""
+__script__"""
 
 
 def tmp(suffix=".sh"):
@@ -76,8 +76,7 @@ class Slurm(object):
 
 
     def __str__(self):
-        return self.tmpl.format(name=self.name, header=self.header,
-                                script="{script}")
+        return self.tmpl.format(name=self.name, header=self.header)
 
     def _tmpfile(self):
         if self.scripts_dir is None:
@@ -113,18 +112,20 @@ class Slurm(object):
         n = self.name
         self.name = self.name.strip(" -")
         self.name += ("-" + name_addition.strip(" -"))
+        args = []
+        for k, v in cmd_kwargs.items():
+            args.append("export %s=%s" % (k, v))
+        args = "\n".join(args)
 
-        tmpl = str(self).format(script=command)
+        tmpl = str(self).replace("__script__", args + "\n###\n" + command)
         if depends_on is None:
             depends_on = []
-
 
         if "logs/" in tmpl and not os.path.exists("logs/"):
             os.makedirs("logs")
 
         with open(self._tmpfile(), "w") as sh:
-            cmd_kwargs["script"] = command
-            sh.write(tmpl.format(**cmd_kwargs))
+            sh.write(tmpl)
 
         job_id = None
         for itry in range(1, tries + 1):
