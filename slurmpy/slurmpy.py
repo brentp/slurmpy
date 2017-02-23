@@ -36,6 +36,7 @@ TMPL = """\
 #SBATCH -e logs/{name}.%J.err
 #SBATCH -o logs/{name}.%J.out
 #SBATCH -J {name}
+#SBATCH --time=84:00:00
 
 {header}
 
@@ -118,7 +119,7 @@ class Slurm(object):
         args = "\n".join(args)
 
         tmpl = str(self).replace("__script__", args + "\n###\n" + command)
-        if depends_on is None:
+        if depends_on is None or (len(depends_on) == 1 and depends_on[0] is None):
             depends_on = []
 
         if "logs/" in tmpl and not os.path.exists("logs/"):
@@ -130,14 +131,13 @@ class Slurm(object):
         job_id = None
         for itry in range(1, tries + 1):
             args = [_cmd]
-            args.extend(["--dependency=afterok:%d" % d for d in depends_on])
+            args.extend([("--dependency=afterok:%d" % int(d)) for d in depends_on])
             if itry > 1:
                 mid = "--dependency=afternotok:%d" % job_id
                 args.append(mid)
             args.append(sh.name)
-            #print(args)
             res = subprocess.check_output(args).strip()
-            print("submitted:", res, file=sys.stderr)
+            print(res, file=sys.stderr)
             self.name = n
             if not res.startswith(b"Submitted batch"):
                 return None
