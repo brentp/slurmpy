@@ -36,7 +36,6 @@ TMPL = """\
 #SBATCH -e logs/{name}.%J.err
 #SBATCH -o logs/{name}.%J.out
 #SBATCH -J {name}
-#SBATCH --time=84:00:00
 
 {header}
 
@@ -59,6 +58,8 @@ class Slurm(object):
             tmpl = TMPL
 
         header = []
+        if 'time' not in slurm_kwargs.keys():
+            slurm_kwargs['time'] = '84:00:00'
         for k, v in slurm_kwargs.items():
             if len(k) > 1:
                 k = "--" + k + "="
