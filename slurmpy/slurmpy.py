@@ -10,10 +10,28 @@ r"""
 <BLANKLINE>
 #SBATCH --account=ucgd-kp
 #SBATCH --partition=ucgd-kp
+#SBATCH --time=84:00:00
 <BLANKLINE>
 set -eo pipefail -o nounset
 <BLANKLINE>
 __script__
+
+>>> s = Slurm("job-name", {"account": "ucgd-kp", "partition": "ucgd-kp"}, bash_strict=False)
+>>> print(str(s))
+#!/bin/bash
+<BLANKLINE>
+#SBATCH -e logs/job-name.%J.err
+#SBATCH -o logs/job-name.%J.out
+#SBATCH -J job-name
+<BLANKLINE>
+#SBATCH --account=ucgd-kp
+#SBATCH --partition=ucgd-kp
+#SBATCH --time=84:00:00
+<BLANKLINE>
+<BLANKLINE>
+<BLANKLINE>
+__script__
+
 
 >>> job_id = s.run("rm -f aaa; sleep 10; echo 213 > aaa", name_addition="", tries=1)
 
@@ -33,13 +51,13 @@ import datetime
 TMPL = """\
 #!/bin/bash
 
-#SBATCH -e logs/{name}.%J.err
-#SBATCH -o logs/{name}.%J.out
+#SBATCH -e {log_dir}/{name}.%J.err
+#SBATCH -o {log_dir}/{name}.%J.out
 #SBATCH -J {name}
 
 {header}
 
-set -eo pipefail -o nounset
+{bash_setup}
 
 __script__"""
 
@@ -51,11 +69,15 @@ def tmp(suffix=".sh"):
 
 
 class Slurm(object):
-    def __init__(self, name, slurm_kwargs=None, tmpl=None, date_in_name=True, scripts_dir="slurm-scripts/"):
+    def __init__(self, name, slurm_kwargs=None, tmpl=None,
+                 date_in_name=True, scripts_dir="slurm-scripts",
+                 log_dir='logs', bash_strict=True):
         if slurm_kwargs is None:
             slurm_kwargs = {}
         if tmpl is None:
             tmpl = TMPL
+        self.log_dir = log_dir
+        self.bash_strict = bash_strict
 
         header = []
         if 'time' not in slurm_kwargs.keys():
@@ -66,8 +88,16 @@ class Slurm(object):
             else:
                 k = "-" + k + " "
             header.append("#SBATCH %s%s" % (k, v))
+
+        # add bash setup list to collect bash script config
+        bash_setup = []
+        if bash_strict:
+            bash_setup.append("set -eo pipefail -o nounset")
+
         self.header = "\n".join(header)
-        self.name = "".join(x for x in name.replace(" ", "-") if x.isalnum() or x == "-")
+        self.bash_setup = "\n".join(bash_setup)
+        self.name = "".join(x for x in name.replace(
+            " ", "-") if x.isalnum() or x == "-")
         self.tmpl = tmpl
         self.slurm_kwargs = slurm_kwargs
         if scripts_dir is not None:
@@ -76,19 +106,22 @@ class Slurm(object):
             self.scripts_dir = None
         self.date_in_name = bool(date_in_name)
 
-
     def __str__(self):
-        return self.tmpl.format(name=self.name, header=self.header)
+        return self.tmpl.format(name=self.name, header=self.header,
+                                log_dir=self.log_dir,
+                                bash_setup=self.bash_setup)
 
     def _tmpfile(self):
         if self.scripts_dir is None:
             return tmp()
         else:
-            if not os.path.exists(self.scripts_dir):
-                os.makedirs(self.scripts_dir)
+            for _dir in [self.scripts_dir, self.log_dir]:
+                if not os.path.exists(_dir):
+                    os.makedirs(_dir)
             return "%s/%s.sh" % (self.scripts_dir, self.name)
 
-    def run(self, command, name_addition=None, cmd_kwargs=None, _cmd="sbatch", tries=1, depends_on=None):
+    def run(self, command, name_addition=None, cmd_kwargs=None,
+            _cmd="sbatch", tries=1, depends_on=None):
         """
         command: a bash command that you want to run
         name_addition: if not specified, the sha1 of the command to run
@@ -123,16 +156,14 @@ class Slurm(object):
         if depends_on is None or (len(depends_on) == 1 and depends_on[0] is None):
             depends_on = []
 
-        if "logs/" in tmpl and not os.path.exists("logs/"):
-            os.makedirs("logs")
-
         with open(self._tmpfile(), "w") as sh:
             sh.write(tmpl)
 
         job_id = None
         for itry in range(1, tries + 1):
             args = [_cmd]
-            args.extend([("--dependency=afterok:%d" % int(d)) for d in depends_on])
+            args.extend([("--dependency=afterok:%d" % int(d))
+                         for d in depends_on])
             if itry > 1:
                 mid = "--dependency=afternotok:%d" % job_id
                 args.append(mid)
@@ -146,6 +177,7 @@ class Slurm(object):
             if itry == 1:
                 job_id = j_id
         return job_id
+
 
 if __name__ == "__main__":
     import doctest
