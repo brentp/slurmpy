@@ -10,10 +10,28 @@ r"""
 <BLANKLINE>
 #SBATCH --account=ucgd-kp
 #SBATCH --partition=ucgd-kp
+#SBATCH --time=84:00:00
 <BLANKLINE>
 set -eo pipefail -o nounset
 <BLANKLINE>
 __script__
+
+>>> s = Slurm("job-name", {"account": "ucgd-kp", "partition": "ucgd-kp"}, bash_strict=False)
+>>> print(str(s))
+#!/bin/bash
+<BLANKLINE>
+#SBATCH -e logs/job-name.%J.err
+#SBATCH -o logs/job-name.%J.out
+#SBATCH -J job-name
+<BLANKLINE>
+#SBATCH --account=ucgd-kp
+#SBATCH --partition=ucgd-kp
+#SBATCH --time=84:00:00
+<BLANKLINE>
+<BLANKLINE>
+<BLANKLINE>
+__script__
+
 
 >>> job_id = s.run("rm -f aaa; sleep 10; echo 213 > aaa", name_addition="", tries=1)
 
@@ -52,14 +70,14 @@ def tmp(suffix=".sh"):
 
 class Slurm(object):
     def __init__(self, name, slurm_kwargs=None, tmpl=None,
-                 date_in_name=True, scripts_dir="slurm-scripts/",
-                 log_dir='logs', check_bash_var=True):
+                 date_in_name=True, scripts_dir="slurm-scripts",
+                 log_dir='logs', bash_strict=True):
         if slurm_kwargs is None:
             slurm_kwargs = {}
         if tmpl is None:
             tmpl = TMPL
         self.log_dir = log_dir
-        self.check_bash_var = check_bash_var
+        self.bash_strict = bash_strict
 
         header = []
         if 'time' not in slurm_kwargs.keys():
@@ -73,7 +91,7 @@ class Slurm(object):
 
         # add bash setup list to collect bash script config
         bash_setup = []
-        if check_bash_var:
+        if bash_strict:
             bash_setup.append("set -eo pipefail -o nounset")
 
         self.header = "\n".join(header)
@@ -137,9 +155,6 @@ class Slurm(object):
         tmpl = str(self).replace("__script__", args + "\n###\n" + command)
         if depends_on is None or (len(depends_on) == 1 and depends_on[0] is None):
             depends_on = []
-
-        if "logs/" in tmpl and not os.path.exists("logs/"):
-            os.makedirs("logs")
 
         with open(self._tmpfile(), "w") as sh:
             sh.write(tmpl)
