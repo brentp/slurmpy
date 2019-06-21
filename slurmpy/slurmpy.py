@@ -46,7 +46,7 @@ import subprocess
 import tempfile
 import atexit
 import hashlib
-import datetime
+from datetime import datetime
 
 TMPL = """\
 #!/bin/bash
@@ -138,7 +138,8 @@ class Slurm(object):
             name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
 
         if self.date_in_name:
-            name_addition += "-" + str(datetime.date.today())
+            name_addition += "-" + datetime.strftime(datetime.now(), 
+                                                     format='%y-%m-%d-%H-%M-%S')
         name_addition = name_addition.strip(" -")
 
         if cmd_kwargs is None:
@@ -162,7 +163,7 @@ class Slurm(object):
         job_id = None
         for itry in range(1, tries + 1):
             args = [_cmd]
-            args.extend([("--dependency=afterok:%d" % int(d))
+            args.extend([("--dependency=afterany:%d" % int(d))
                          for d in depends_on])
             if itry > 1:
                 mid = "--dependency=afternotok:%d" % job_id
