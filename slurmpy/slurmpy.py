@@ -168,14 +168,18 @@ class Slurm(object):
                 mid = "--dependency=afternotok:%d" % job_id
                 args.append(mid)
             args.append(sh.name)
-            res = subprocess.check_output(args).strip()
-            print(res, file=sys.stderr)
-            self.name = n
-            if not res.startswith(b"Submitted batch"):
-                return None
-            j_id = int(res.split()[-1])
-            if itry == 1:
-                job_id = j_id
+            try:
+                res = subprocess.check_output(args).strip()
+                print(res.decode(), file=sys.stderr)
+                self.name = n
+                if not res.startswith(b"Submitted batch"):
+                    return None
+                j_id = int(res.split()[-1])
+                if itry == 1:
+                    job_id = j_id
+            except Exception as e:
+                print ("\x1B[31;9m" + 'Error submitting job:' + "\x1B[0m\n")
+                print(e.output.decode())
         return job_id
 
 
