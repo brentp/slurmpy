@@ -29,7 +29,7 @@ Dependencies
 Each time `slurmpy.Slurm().run()` is called, it returns the job-id of the submitted job. This
 can then be sent to a subsequent job:
 ```
-s = Slurmp()
+s = Slurm()
 s.run(..., depends_on=[job_id])
 
 ```

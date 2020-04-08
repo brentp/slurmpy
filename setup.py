@@ -22,6 +22,7 @@ setup(
     author="Brent Pedersen",
     author_email="bpederse@gmail.com",
     description=("submit jobs to slurm with python"),
+    long_description_content_type="text/markdown",
     license="MIT",
     keywords="cluster slurmpy",
     url="https://github.com/brentp/slurmpy",
