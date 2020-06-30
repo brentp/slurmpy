@@ -162,11 +162,36 @@ class Slurm(object):
         job_id = None
         for itry in range(1, tries + 1):
             args = [_cmd]
-            args.extend([("--dependency=afterok:%d" % int(d))
-                         for d in depends_on])
+            # args.extend([("--dependency=afterok:%d" % int(d))
+            #              for d in depends_on])
+            # if itry > 1:
+            #     mid = "--dependency=afternotok:%d" % job_id
+            #     args.append(mid)
+
+            # 20200630
+            # sbatch job dependency has the following format
+            # -d, --dependency=<dependency_list>
+            #       <dependency_list> is of the form <type:job_id[:job_id][,type:job_id[:job_id]]> 
+            #       or <type:job_id[:job_id][?type:job_id[:job_id]]>.
+            #       All dependencies must be satisfied if the "," separator is used.
+            #       Any dependency may be satisfied if the "?" separator is used.
+            #       Only one separator may be used.
+            # Create job dependecies
+            dependencies = None
+            if depends_on:
+                dependencies = "afterok" + "".join([(":%d" % int(d)) for d in depends_on])
+            # Create retry job dependency
             if itry > 1:
-                mid = "--dependency=afternotok:%d" % job_id
-                args.append(mid)
+                mid = "afternotok:%d" % job_id
+                # Merge retry dependency to job dependencies
+                if dependencies:
+                    dependencies += "," + mid
+                else:
+                    dependencies = mid
+            # Add dependency option to sbatch
+            if dependencies:
+                args.extend(["--dependency=%s" % dependencies])
+            print(args, file=sys.stderr)
             args.append(sh.name)
             res = subprocess.check_output(args).strip()
             print(res, file=sys.stderr)
