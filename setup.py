@@ -25,7 +25,7 @@ setup(
     long_description_content_type="text/markdown",
     license="MIT",
     keywords="cluster slurmpy",
-    url="https://github.com/brentp/slurmpy",
+    # url="https://github.com/brentp/slurmpy",
     packages=['slurmpy'],
     long_description=open('README.md').read(),
     classifiers=[
@@ -36,3 +36,5 @@ setup(
         'Programming Language :: Python :: 3'
     ],
 )
+
+# !pip install --ignore-installed  slurmpy
