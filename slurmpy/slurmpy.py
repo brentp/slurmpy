@@ -168,11 +168,10 @@ class Slurm(object):
             args.extend([("--dependency=after:%d" % int(d)) for d in after])
         args.append(sh.name)
         if not local:
-            res = subprocess.check_output(args).strip()
+            res = subprocess.check_output(args, text=True).strip()
             print(res, file=log_file)
-            if not res.startswith(b"Submitted batch"):
+            if not res.startswith("Submitted batch"):
                 return None
-            res = str(res, 'utf-8')
             job_id = res.split()[-1]
             return job_id
         else:
@@ -183,7 +182,7 @@ class Slurm(object):
     def query(job_id, field=None, on_failure='exception'):
         try:
             ret = subprocess.check_output(["scontrol", "-d", "-o", "show", "job", str(job_id)],
-                                          stderr=subprocess.STDOUT)
+                                          text=True, stderr=subprocess.STDOUT)
         except:
             if on_failure == 'warn':
                 print("warning: scontrol query of job_id=%s failed" % str(job_id))
@@ -194,7 +193,6 @@ class Slurm(object):
                 raise SlurmException("Failed to query SLURM")
 
         try:
-            ret = str(ret, 'utf-8')
             ret_dict = {pair[0]: "=".join(pair[1:]) for pair in [_.split("=") for _ in ret.split()]}
         except:
             print('ret_dict failed for job_id=' + str(job_id) + ', ret=' + str(ret))
