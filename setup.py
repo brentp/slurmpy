@@ -38,3 +38,5 @@ setup(
 )
 
 # !pip install --ignore-installed  slurmpy
+# install locally using: python setup.py install --user
+#  cd ../; python setup.py install --user; cd test

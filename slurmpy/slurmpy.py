@@ -81,14 +81,15 @@ class Slurm(object):
             tmpl = TMPL
 
         header = []
-        if 'time' not in slurm_kwargs.keys():
-            slurm_kwargs['time'] = '84:00:00'
-        for k, v in slurm_kwargs.items():
-            if len(k) > 1:
-                k = "--" + k + "="
-            else:
-                k = "-" + k + " "
-            header.append("#SBATCH %s%s" % (k, v))
+        for k, v in sorted(slurm_kwargs.items()): # sort only for the doctest purpose 
+            is_long_option = len(k) > 1
+            if is_long_option: 
+                k = "--" + k 
+                if v is not None: 
+                    k += "=" 
+            else: 
+                k = "-" + k + " " 
+            header.append("#SBATCH %s%s" % (k, v if v is not None else "")) 
 
         self.header = "\n".join(header)
         self.name = "".join(x for x in name.replace(" ", "_") if x.isalnum() or x in ("-", "_"))
@@ -110,10 +111,10 @@ class Slurm(object):
             if not os.path.exists(self.scripts_dir):
                 os.makedirs(self.scripts_dir)
 
-                script_name = self.name.strip("-")
-                if name_addition:
-                    script_name += name_addition.strip(" -")
-                return "%s/%s.sh" % (self.scripts_dir, script_name)
+            script_name = self.name.strip("-")
+            if name_addition:
+                script_name += name_addition.strip(" -")
+            return "%s/%s.sh" % (self.scripts_dir, script_name)
 
     def run(self, command, name_addition=None, cmd_kwargs=None, local=False, depends_on=None, log_file=None,
             after=None):
@@ -136,8 +137,6 @@ class Slurm(object):
             name_addition += "-" + datetime.datetime.fromtimestamp(time.time()).isoformat()
         name_addition = name_addition.strip(" -")
         script_name = self._get_scriptname(name_addition)
-
-        print('script_name = ' + str(script_name)) #TODO: remove
 
         if cmd_kwargs is None:
             cmd_kwargs = {}
@@ -173,6 +172,7 @@ class Slurm(object):
             print(res, file=log_file)
             if not res.startswith(b"Submitted batch"):
                 return None
+            res = str(res, 'utf-8')
             job_id = res.split()[-1]
             return job_id
         else:
@@ -194,6 +194,7 @@ class Slurm(object):
                 raise SlurmException("Failed to query SLURM")
 
         try:
+            ret = str(ret, 'utf-8')
             ret_dict = {pair[0]: "=".join(pair[1:]) for pair in [_.split("=") for _ in ret.split()]}
         except:
             print('ret_dict failed for job_id=' + str(job_id) + ', ret=' + str(ret))
