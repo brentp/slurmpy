@@ -11,7 +11,7 @@ r"""
 <BLANKLINE>
 #SBATCH -J -Q
 #SBATCH --no-requeue
-#SBATCH --partition=hnm
+#SBATCH --partition=ucgd
 #SBATCH --time=84:00:00
 <BLANKLINE>
 set -eo pipefail -o nounset
