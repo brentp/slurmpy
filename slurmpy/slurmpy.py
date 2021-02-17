@@ -131,8 +131,9 @@ class Slurm(object):
         after: job ids that this depends on them to START before it is run (uses 'after')
         """
 
-        # if name_addition is None:
-        #     name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
+        if name_addition is None:
+            # name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
+            name_addition = ''
 
         if self.date_in_name:
             name_addition += "-" + datetime.datetime.fromtimestamp(time.time()).isoformat()
