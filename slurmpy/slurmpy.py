@@ -171,7 +171,9 @@ class Slurm(object):
             args.extend([("--dependency=after:%d" % int(d)) for d in after])
         args.append(sh.name)
         if not local:
-            res = subprocess.check_output(args, text=True).strip()
+            # res = subprocess.check_output(args, text=True).strip()
+            res = subprocess.check_output(args, universal_newlines=True).strip()
+
             print(res, file=log_file)
             if not res.startswith("Submitted batch"):
                 return None
@@ -185,7 +187,8 @@ class Slurm(object):
     def query(job_id, field=None, on_failure='exception'):
         try:
             ret = subprocess.check_output(["scontrol", "-d", "-o", "show", "job", str(job_id)],
-                                          text=True, stderr=subprocess.STDOUT)
+                                          universal_newlines=True, stderr=subprocess.STDOUT)
+
         except:
             if on_failure == 'warn':
                 print("warning: scontrol query of job_id=%s failed" % str(job_id))
