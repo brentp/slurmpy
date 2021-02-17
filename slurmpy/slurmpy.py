@@ -92,7 +92,8 @@ class Slurm(object):
             header.append("#SBATCH %s%s" % (k, v if v is not None else "")) 
 
         self.header = "\n".join(header)
-        self.name = "".join(x for x in name.replace(" ", "_") if x.isalnum() or x in ("-", "_"))
+        # self.name = "".join(x for x in name.replace(" ", "_") if x.isalnum() or x in ("-", "_"))
+        self.name = name
         self.tmpl = tmpl
         self.slurm_kwargs = slurm_kwargs
         if scripts_dir is not None:
@@ -130,13 +131,15 @@ class Slurm(object):
         after: job ids that this depends on them to STARTbefore it is run (uses 'after')
         """
 
-        if name_addition is None:
-            name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
+        # if name_addition is None:
+        #     name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
+        #
+        # if self.date_in_name:
+        #     name_addition += "-" + datetime.datetime.fromtimestamp(time.time()).isoformat()
+        # name_addition = name_addition.strip(" -")
+        # script_name = self._get_scriptname(name_addition)
 
-        if self.date_in_name:
-            name_addition += "-" + datetime.datetime.fromtimestamp(time.time()).isoformat()
-        name_addition = name_addition.strip(" -")
-        script_name = self._get_scriptname(name_addition)
+        script_name = self.name
 
         if cmd_kwargs is None:
             cmd_kwargs = {}
