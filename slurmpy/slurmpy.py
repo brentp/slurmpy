@@ -61,6 +61,9 @@ TMPL = """\
 
 __script__"""
 
+VALID_DEPENDENCY_TYPES = ["after", "afterany", "afterburstbuffer",
+                          "aftercorr", "afternotok", "afterok", "expand"]
+
 
 def tmp(suffix=".sh"):
     t = tempfile.mktemp(suffix=suffix)
@@ -121,7 +124,7 @@ class Slurm(object):
             return "%s/%s.sh" % (self.scripts_dir, self.name)
 
     def run(self, command, name_addition=None, cmd_kwargs=None,
-            _cmd="sbatch", tries=1, depends_on=None):
+            _cmd="sbatch", tries=1, depends_on=None, depends_how='afterok'):
         """
         command: a bash command that you want to run
         name_addition: if not specified, the sha1 of the command to run
@@ -133,7 +136,10 @@ class Slurm(object):
         tries: try to run a job either this many times or until the first
                success.
         depends_on: job ids that this depends on before it is run (users 'afterok')
+        depends_how: ability to change how a job depends on others
         """
+        if depends_how not in VALID_DEPENDENCY_TYPES:
+            raise ValueError(f"depends_how must be in {VALID_DEPENDENCY_TYPES}")
         if name_addition is None:
             name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
 
@@ -165,12 +171,12 @@ class Slurm(object):
             args = [_cmd]
             dependency_string = ','.join(depends_on)
             if len(depends_on) > 0:
-                args.extend(f"--dependency=afterany:{dependency_string}")
+                args.extend(f"--dependency={depends_how}:{dependency_string}")
             else:
-                args.extend([("--dependency=afterany:%d" % int(d))
+                args.extend([(f"--dependency={depends_how}:{int(d)}")
                             for d in depends_on])
             if itry > 1:
-                mid = "--dependency=afternotok:%d" % job_id
+                mid = f"--dependency=afternotok:{job_id}"
                 args.append(mid)
             args.append(sh.name)
             res = subprocess.check_output(args).strip()
