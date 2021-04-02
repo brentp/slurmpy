@@ -61,8 +61,15 @@ TMPL = """\
 
 __script__"""
 
-VALID_DEPENDENCY_TYPES = ["after", "afterany", "afterburstbuffer",
-                          "aftercorr", "afternotok", "afterok", "expand"]
+VALID_DEPENDENCY_TYPES = {
+    "after",
+    "afterany",
+    "afterburstbuffer",
+    "aftercorr",
+    "afternotok",
+    "afterok",
+    "expand",
+}
 
 
 def tmp(suffix=".sh"):
