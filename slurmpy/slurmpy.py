@@ -180,8 +180,15 @@ class Slurm(object):
             if depends_on:
                 dependency_string= f"{depends_how}{dependency_string}"
             if itry > 1:
-                mid = f"--dependency=afternotok:{job_id}"
-                args.append(mid)
+                mid = f"afternotok:{job_id}"
+                # Merge retry dependency to job dependencies
+                if dependency_string:
+                    dependency_string = f"{dependency_string},{mid}"
+                else:
+                    dependency_string= mid
+            # Add dependency option to sbatch
+            if dependency_string:
+                args.extend([f"--dependency={dependency_string}" ])
             args.append(sh.name)
             res = subprocess.check_output(args).strip()
             print(res, file=sys.stderr)
