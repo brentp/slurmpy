@@ -176,7 +176,11 @@ class Slurm(object):
         job_id = None
         for itry in range(1, tries + 1):
             args = [_cmd]
-            dependency_string = ','.join(str(y) for y in depends_on)
+            # sbatch (https://slurm.schedmd.com/sbatch.html) job dependency has the following format:
+            # -d, --dependency=<dependency_list>
+            #       <dependency_list> is of the form <type:job_id[:job_id][,type:job_id[:job_id]]> 
+            # Create job dependency string
+            dependency_string = "".join([f":{d}" for d in depends_on])
             if depends_on:
                 dependency_string= f"{depends_how}{dependency_string}"
             if itry > 1:
