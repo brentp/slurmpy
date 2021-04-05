@@ -195,7 +195,7 @@ class Slurm(object):
                 args.extend([f"--dependency={dependency_string}" ])
             args.append(sh.name)
             res = subprocess.check_output(args).strip()
-            print(res, file=sys.stderr)
+            print(res.decode(), file=sys.stderr)
             self.name = n
             if not res.startswith(b"Submitted batch"):
                 return None
