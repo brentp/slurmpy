@@ -46,7 +46,7 @@ import subprocess
 import tempfile
 import atexit
 import hashlib
-import datetime
+from datetime import datetime
 
 TMPL = """\
 #!/bin/bash
@@ -60,6 +60,16 @@ TMPL = """\
 {bash_setup}
 
 __script__"""
+
+VALID_DEPENDENCY_TYPES = {
+    "after",
+    "afterany",
+    "afterburstbuffer",
+    "aftercorr",
+    "afternotok",
+    "afterok",
+    "expand",
+}
 
 
 def tmp(suffix=".sh"):
@@ -121,7 +131,7 @@ class Slurm(object):
             return "%s/%s.sh" % (self.scripts_dir, self.name)
 
     def run(self, command, name_addition=None, cmd_kwargs=None,
-            _cmd="sbatch", tries=1, depends_on=None):
+            _cmd="sbatch", tries=1, depends_on=None, depends_how='afterok'):
         """
         command: a bash command that you want to run
         name_addition: if not specified, the sha1 of the command to run
@@ -133,12 +143,16 @@ class Slurm(object):
         tries: try to run a job either this many times or until the first
                success.
         depends_on: job ids that this depends on before it is run (users 'afterok')
+        depends_how: ability to change how a job depends on others
         """
+        if depends_how not in VALID_DEPENDENCY_TYPES:
+            raise ValueError(f"depends_how must be in {VALID_DEPENDENCY_TYPES}")
         if name_addition is None:
             name_addition = hashlib.sha1(command.encode("utf-8")).hexdigest()
 
         if self.date_in_name:
-            name_addition += "-" + str(datetime.date.today())
+            name_addition += "-" + datetime.strftime(datetime.now(), 
+                                                     format='%y-%m-%d-%H-%M-%S')
         name_addition = name_addition.strip(" -")
 
         if cmd_kwargs is None:
@@ -162,11 +176,23 @@ class Slurm(object):
         job_id = None
         for itry in range(1, tries + 1):
             args = [_cmd]
-            args.extend([("--dependency=afterok:%d" % int(d))
-                         for d in depends_on])
+            # sbatch (https://slurm.schedmd.com/sbatch.html) job dependency has the following format:
+            # -d, --dependency=<dependency_list>
+            #       <dependency_list> is of the form <type:job_id[:job_id][,type:job_id[:job_id]]> 
+            # Create job dependency string
+            dependency_string = "".join([f":{d}" for d in depends_on])
+            if depends_on:
+                dependency_string= f"{depends_how}{dependency_string}"
             if itry > 1:
-                mid = "--dependency=afternotok:%d" % job_id
-                args.append(mid)
+                mid = f"afternotok:{job_id}"
+                # Merge retry dependency to job dependencies
+                if dependency_string:
+                    dependency_string = f"{dependency_string},{mid}"
+                else:
+                    dependency_string= mid
+            # Add dependency option to sbatch
+            if dependency_string:
+                args.extend([f"--dependency={dependency_string}" ])
             args.append(sh.name)
             res = subprocess.check_output(args).strip()
             print(res, file=sys.stderr)

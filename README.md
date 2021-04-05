@@ -26,14 +26,27 @@ The default is `sbatch` which submits jobs to slurm.
 Dependencies
 ============
 
-Each time `slurmpy.Slurm().run()` is called, it returns the job-id of the submitted job. This
-can then be sent to a subsequent job:
+Each time `slurmpy.Slurm().run()` is called, it returns the job-id of the submitted job. One or more
+of these can be provided as arguments to a subsequent job:
 ```
 s = Slurm()
 s.run(..., depends_on=[job_id])
+# or for multiple dependencies
+s.run(..., depends_on=[job_id_1, job_id_2, job_id_3])
 
 ```
-to indicate that this job should not run until the the job with `job_id` has finished successfully.
+to indicate that this job should not run until the the job with `job_id` (or ids `job_id_1-3`) has finished successfully.
+
+Additionally, SLURM allows you to define how a job depends on previous jobs e.g. should it run 
+only on success or always etc. For this `slurmpy.Slurm().run()` provides an additional argument `depends_how`:
+
+```
+s = Slurmp()
+s.run(..., depends_on=[job_id], depends_how='afterany')
+```
+currently supported are the following options with "afterok" as default: 
+"after", "afterany", "afterburstbuffer", "aftercorr", "afternotok", "afterok", "expand"
+More details can be found here: https://slurm.schedmd.com/sbatch.html in the `--dependency` section.
 
 Install
 =======
