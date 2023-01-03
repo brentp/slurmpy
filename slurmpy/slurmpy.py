@@ -79,11 +79,13 @@ def tmp(suffix=".sh"):
 
 
 class Slurm(object):
-    def __init__(self, name, slurm_kwargs=None, tmpl=None,
+    def __init__(self, name, slurm_kwargs=None, slurm_flags=None, tmpl=None,
                  date_in_name=True, scripts_dir="slurm-scripts",
                  log_dir='logs', bash_strict=True):
         if slurm_kwargs is None:
             slurm_kwargs = {}
+        if slurm_flags is None:
+            slurm_flags = []
         if tmpl is None:
             tmpl = TMPL
         self.log_dir = log_dir
@@ -97,7 +99,14 @@ class Slurm(object):
                 k = "--" + k + "="
             else:
                 k = "-" + k + " "
-            header.append("#SBATCH %s%s" % (k, v))
+            header.append(f"#SBATCH {k}{v}")
+
+        for k in slurm_flags:
+            if len(k) > 1:
+                k = "--" + k
+            else:
+                k = "-" + k
+            header.append(f"#SBATCH {k}")
 
         # add bash setup list to collect bash script config
         bash_setup = []
